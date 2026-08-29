@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="googlebot" content="noindex, nofollow">
+  <meta property="og:title" content="メール整理を、1クリックにした話">
+  <meta property="og:description" content="毎日の手作業5ステップをボタン一つに圧縮したデスクトップツール「Email Manager」の開発ストーリー。">
+  <meta property="og:type" content="article">
+  <title>メール整理を、1クリックにした話</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23FFFFFF'/><rect x='8' y='8' width='84' height='84' rx='14' fill='none' stroke='%233B82F6' stroke-width='4'/><circle cx='32' cy='40' r='10' fill='%233B82F6' opacity='0.8'/><circle cx='68' cy='40' r='10' fill='%2360A5FA' opacity='0.8'/><rect x='25' y='62' width='50' height='6' rx='3' fill='%2394A3B8' opacity='0.6'/><rect x='30' y='74' width='40' height='6' rx='3' fill='%2394A3B8' opacity='0.3'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ads: {
+              bg: '#FFFFFF',
+              surface: '#F8FAFC',
+              hover: '#F1F5F9',
+              border: '#E2E8F0',
+              accent: '#3B82F6',
+              'accent-light': '#2563EB',
+              text: '#1E293B',
+              muted: '#64748B',
+              dim: '#94A3B8',
+              positive: '#10B981',
+              negative: '#EF4444',
+              warning: '#F59E0B',
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans JP"', '"Hiragino Sans"', '"Hiragino Kaku Gothic ProN"', '"Yu Gothic UI"', '"Meiryo"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { border-top: none !important; }
+      .rounded-xl { break-inside: avoid; }
+      .md\:flex-row { flex-direction: row !important; }
+      .md\:hidden { display: none !important; }
+      .hidden.md\:block { display: block !important; }
+      .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .sm\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+      .md\:mb-20 { margin-bottom: 5rem !important; }
+      .md\:py-16 { padding-top: 4rem !important; padding-bottom: 4rem !important; }
+      .bg-clip-text.text-transparent {
+        -webkit-background-clip: initial !important;
+        background-clip: initial !important;
+        color: #2563EB !important;
+        -webkit-text-fill-color: #2563EB !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-ads-bg text-slate-600 antialiased leading-relaxed border-t-4 border-ads-accent">
+  <div class="no-print max-w-3xl mx-auto px-5 pt-2 flex justify-end">
+    <button onclick="window.print()" class="flex items-center gap-1.5 text-xs text-ads-dim hover:text-ads-accent transition-colors cursor-pointer">
+      <i data-lucide="download" class="w-3.5 h-3.5"></i>
+      PDF
+    </button>
+  </div>
+  <main class="max-w-3xl mx-auto px-5 py-10 md:py-16">
+
+<!-- ============================================================ -->
+<!--  HERO                                                        -->
+<!-- ============================================================ -->
+<div class="text-center mb-8 md:mb-10">
+  <div class="inline-flex items-center gap-2 bg-ads-accent/10 text-ads-accent-light px-4 py-1.5 rounded-full text-sm font-medium mb-6">
+    <i data-lucide="briefcase" class="w-4 h-4"></i>
+    業務効率化
+  </div>
+  <h1 class="text-3xl md:text-5xl font-black text-slate-900 tracking-tight mb-6">
+    メール整理を、<span class="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">1クリック</span>にした話
+  </h1>
+  <p class="text-lg text-ads-muted max-w-xl mx-auto leading-relaxed">
+    毎日3〜5通 × 手作業5ステップが仕事の流れを止めていた。<br>
+    ひとことで言うと ──
+  </p>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  ONE-PAGE SUMMARY                                            -->
+<!-- ============================================================ -->
+<div class="bg-ads-surface border border-ads-border rounded-2xl p-6 md:p-10 mb-6">
+  <div class="text-center mb-8">
+    <p class="text-xl md:text-2xl font-black text-slate-900 mb-2">
+      「<span class="text-ads-accent-light">Outlook から取り込む</span>」を押すだけ
+    </p>
+    <p class="text-sm text-ads-muted">メール本体・添付ファイル・フォルダ命名、すべて自動</p>
+  </div>
+
+  <div class="flex flex-col md:flex-row items-stretch justify-center gap-4 md:gap-6 mb-8">
+    <!-- Before -->
+    <div class="flex-1 bg-red-500/5 border border-red-500/20 rounded-xl p-5">
+      <div class="text-xs text-red-600 font-bold mb-3 text-center tracking-wide">BEFORE — これまで</div>
+      <div class="space-y-2.5">
+        <div class="flex items-center gap-2.5 text-sm text-slate-700">
+          <span class="w-5 h-5 rounded-full bg-red-500/15 text-red-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">1</span>
+          メール確認
+        </div>
+        <div class="flex items-center gap-2.5 text-sm text-slate-700">
+          <span class="w-5 h-5 rounded-full bg-red-500/15 text-red-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">2</span>
+          フォルダを手動作成
+        </div>
+        <div class="flex items-center gap-2.5 text-sm text-slate-700">
+          <span class="w-5 h-5 rounded-full bg-red-500/15 text-red-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">3</span>
+          フォルダ名を手入力
+        </div>
+        <div class="flex items-center gap-2.5 text-sm text-slate-700">
+          <span class="w-5 h-5 rounded-full bg-red-500/15 text-red-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">4</span>
+          .msg ファイルを保存
+        </div>
+        <div class="flex items-center gap-2.5 text-sm text-slate-700">
+          <span class="w-5 h-5 rounded-full bg-red-500/15 text-red-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">5</span>
+          添付ファイルを別途保存
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-red-500/15 text-xs text-red-600/80 text-center">
+        × 毎日3〜5回、これを繰り返す
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="flex items-center justify-center">
+      <i data-lucide="arrow-right" class="w-7 h-7 text-ads-accent hidden md:block"></i>
+      <i data-lucide="arrow-down" class="w-7 h-7 text-ads-accent md:hidden"></i>
+    </div>
+
+    <!-- After -->
+    <div class="flex-1 bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-5">
+      <div class="text-xs text-emerald-600 font-bold mb-3 text-center tracking-wide">AFTER — Email Manager</div>
+      <div class="space-y-2.5">
+        <div class="flex items-center gap-2.5 text-sm text-slate-700">
+          <span class="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">1</span>
+          メール確認
+        </div>
+        <div class="flex items-center gap-2.5 text-sm text-slate-700">
+          <span class="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">2</span>
+          ボタンを1回押す
+        </div>
+      </div>
+      <div class="mt-4 space-y-1.5">
+        <div class="flex items-center gap-2 text-xs text-emerald-600/80">
+          <i data-lucide="check" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          フォルダを自動作成
+        </div>
+        <div class="flex items-center gap-2 text-xs text-emerald-600/80">
+          <i data-lucide="check" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          フォルダ名を自動設定（令和日付＋件名）
+        </div>
+        <div class="flex items-center gap-2 text-xs text-emerald-600/80">
+          <i data-lucide="check" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          .msg と添付ファイルを自動保存
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-emerald-500/15 text-xs text-emerald-600/80 text-center">
+        仕事の流れが止まらない
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats pills -->
+  <div class="flex flex-wrap justify-center gap-2">
+    <div class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3.5 py-1.5 text-xs text-slate-700">
+      <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-500"></i>
+      毎日3〜5通の整理
+    </div>
+    <div class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3.5 py-1.5 text-xs text-slate-700">
+      <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-amber-500"></i>
+      5ステップ → ボタン1つ
+    </div>
+    <div class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3.5 py-1.5 text-xs text-slate-700">
+      <i data-lucide="zap" class="w-3.5 h-3.5 text-emerald-500"></i>
+      仕事の流れが止まらない
+    </div>
+  </div>
+</div>
+
+<p class="text-center text-ads-muted mb-16 md:mb-20">
+  ここから先で、作成の背景・アプリの画面・できること・使った技術を順番に紹介します。
+</p>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 1: 作成しようと思った理由                            -->
+<!-- ============================================================ -->
+<section class="mb-16 md:mb-20">
+  <div class="flex items-center gap-3 mb-8">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/10 flex-shrink-0">
+      <i data-lucide="lightbulb" class="w-5 h-5 text-blue-600"></i>
+    </div>
+    <h2 class="text-xl md:text-2xl font-bold text-slate-900">作成しようと思った理由</h2>
+  </div>
+
+  <p class="mb-6 leading-relaxed">
+    仕事で Outlook を使ってメールを管理している。受信したメールは、<strong class="text-slate-900">1通ごとに専用フォルダを作って保存する</strong>というルールがある。フォルダ名には受信日と件名を入れなければならない。
+  </p>
+
+  <p class="mb-8 leading-relaxed">
+    この作業が毎日3〜5通発生していた。1通あたり「フォルダ作成 → フォルダ名入力 → .msg 保存 → 添付保存」という5ステップを繰り返すことになり、<strong class="text-slate-900">そのたびに仕事の流れが止まってしまう</strong>のがずっと気になっていた。
+  </p>
+
+  <!-- 数字カード -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-6 text-center">
+      <div class="text-3xl md:text-4xl font-black text-ads-accent leading-tight mb-2">3〜5通</div>
+      <div class="text-sm text-ads-muted">毎日の整理対象メール</div>
+    </div>
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-6 text-center">
+      <div class="text-3xl md:text-4xl font-black text-red-500 leading-tight mb-2">5ステップ</div>
+      <div class="text-sm text-ads-muted">1通あたりの手作業数</div>
+    </div>
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-6 text-center">
+      <div class="text-3xl md:text-4xl font-black text-emerald-600 leading-tight mb-2">1クリック</div>
+      <div class="text-sm text-ads-muted">アプリ作成後の操作数</div>
+    </div>
+  </div>
+
+  <div class="bg-ads-accent/5 border border-ads-accent/20 rounded-xl p-5">
+    <div class="flex items-start gap-3">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-ads-accent/10 flex-shrink-0 mt-0.5">
+        <i data-lucide="quote" class="w-4 h-4 text-ads-accent-light"></i>
+      </div>
+      <div>
+        <p class="font-bold text-ads-accent-light mb-1">作るきっかけ</p>
+        <p class="text-ads-muted leading-relaxed">
+          「この一連の保存作業、何とか短縮できないかな」と思ったのがきっかけ。<strong class="text-slate-800">自分の武器を自分で作る</strong>という目標でアプリ開発を始めた。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 2: アプリで何を解決したいか                          -->
+<!-- ============================================================ -->
+<section class="mb-16 md:mb-20">
+  <div class="flex items-center gap-3 mb-8">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-500/10 flex-shrink-0">
+      <i data-lucide="target" class="w-5 h-5 text-amber-600"></i>
+    </div>
+    <h2 class="text-xl md:text-2xl font-bold text-slate-900">アプリで何を解決したか</h2>
+  </div>
+
+  <p class="mb-8 leading-relaxed">
+    「仕事の流れが止まる」という体験を解消することが目標だった。Before と After を比べると、その変化がよくわかる。
+  </p>
+
+  <!-- Before フロー -->
+  <div class="bg-ads-surface border border-ads-border rounded-xl p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-2 mb-6">
+      <div class="inline-flex items-center gap-1.5 bg-red-500/10 text-red-600 px-3 py-1 rounded-full text-xs font-bold">
+        <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+        BEFORE
+      </div>
+      <span class="text-sm text-slate-700 font-medium">アプリ作成前の手順</span>
+    </div>
+    <div class="flex flex-col md:flex-row items-center gap-2 md:gap-1">
+      <div class="bg-white border border-red-200 rounded-lg px-3 py-2.5 text-center w-full md:flex-1">
+        <i data-lucide="mail-open" class="w-4 h-4 text-red-500 mx-auto mb-1"></i>
+        <div class="text-xs font-medium text-slate-700">メール確認</div>
+      </div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-ads-dim flex-shrink-0 hidden md:block"></i>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-ads-dim flex-shrink-0 md:hidden"></i>
+      <div class="bg-white border border-red-200 rounded-lg px-3 py-2.5 text-center w-full md:flex-1">
+        <i data-lucide="folder-plus" class="w-4 h-4 text-red-500 mx-auto mb-1"></i>
+        <div class="text-xs font-medium text-slate-700">フォルダ作成</div>
+      </div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-ads-dim flex-shrink-0 hidden md:block"></i>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-ads-dim flex-shrink-0 md:hidden"></i>
+      <div class="bg-white border border-red-200 rounded-lg px-3 py-2.5 text-center w-full md:flex-1">
+        <i data-lucide="keyboard" class="w-4 h-4 text-red-500 mx-auto mb-1"></i>
+        <div class="text-xs font-medium text-slate-700">名前を手入力</div>
+      </div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-ads-dim flex-shrink-0 hidden md:block"></i>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-ads-dim flex-shrink-0 md:hidden"></i>
+      <div class="bg-white border border-red-200 rounded-lg px-3 py-2.5 text-center w-full md:flex-1">
+        <i data-lucide="file" class="w-4 h-4 text-red-500 mx-auto mb-1"></i>
+        <div class="text-xs font-medium text-slate-700">.msg 保存</div>
+      </div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-ads-dim flex-shrink-0 hidden md:block"></i>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-ads-dim flex-shrink-0 md:hidden"></i>
+      <div class="bg-white border border-red-200 rounded-lg px-3 py-2.5 text-center w-full md:flex-1">
+        <i data-lucide="paperclip" class="w-4 h-4 text-red-500 mx-auto mb-1"></i>
+        <div class="text-xs font-medium text-slate-700">添付を別途保存</div>
+      </div>
+    </div>
+    <div class="mt-4 text-center text-xs text-red-600/80 flex items-center justify-center gap-1.5">
+      <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+      このたびに仕事の流れが止まる
+    </div>
+  </div>
+
+  <!-- After フロー -->
+  <div class="bg-ads-surface border border-ads-border rounded-xl p-6 md:p-8 mb-8">
+    <div class="flex items-center gap-2 mb-6">
+      <div class="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold">
+        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+        AFTER
+      </div>
+      <span class="text-sm text-slate-700 font-medium">Email Manager を使った手順</span>
+    </div>
+    <div class="flex flex-col md:flex-row items-center gap-2 md:gap-1">
+      <div class="bg-white border border-emerald-200 rounded-lg px-3 py-2.5 text-center w-full md:w-40">
+        <i data-lucide="mail-open" class="w-4 h-4 text-emerald-600 mx-auto mb-1"></i>
+        <div class="text-xs font-medium text-slate-700">メール確認</div>
+      </div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-ads-dim flex-shrink-0 hidden md:block"></i>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-ads-dim flex-shrink-0 md:hidden"></i>
+      <div class="bg-emerald-500/10 border border-emerald-300 rounded-lg px-4 py-2.5 text-center w-full md:w-48">
+        <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-emerald-600 mx-auto mb-1"></i>
+        <div class="text-xs font-bold text-emerald-700">ボタンを押す</div>
+      </div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-ads-dim flex-shrink-0 hidden md:block"></i>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-ads-dim flex-shrink-0 md:hidden"></i>
+      <div class="flex-1 bg-white border border-emerald-200 rounded-lg p-3">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 text-xs text-emerald-700">
+            <i data-lucide="check" class="w-3 h-3 flex-shrink-0"></i> フォルダ自動作成
+          </div>
+          <div class="flex items-center gap-2 text-xs text-emerald-700">
+            <i data-lucide="check" class="w-3 h-3 flex-shrink-0"></i> 名前自動設定
+          </div>
+          <div class="flex items-center gap-2 text-xs text-emerald-700">
+            <i data-lucide="check" class="w-3 h-3 flex-shrink-0"></i> .msg + 添付を保存
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-4 text-center text-xs text-emerald-600/80 flex items-center justify-center gap-1.5">
+      <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+      仕事の流れが止まらない
+    </div>
+  </div>
+
+  <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+    <p class="text-sm text-ads-muted leading-relaxed">
+      フォルダ名は <strong class="text-slate-800">「R8.8.1　件名」</strong> 形式（令和年.月.日）で自動生成される。保存前に確認ダイアログが開くので、フォルダ名の修正や確認ができる。
+    </p>
+    <div class="mt-3 bg-white border border-ads-border/50 rounded-lg px-4 py-2 text-xs text-slate-600 font-mono">
+      R8.8.29　第7期実施計画策定及び一次要求書の提出について
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 3: 完成したアプリ画面                                -->
+<!-- ============================================================ -->
+<section class="mb-16 md:mb-20">
+  <div class="flex items-center gap-3 mb-8">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-500/10 flex-shrink-0">
+      <i data-lucide="monitor" class="w-5 h-5 text-slate-600"></i>
+    </div>
+    <h2 class="text-xl md:text-2xl font-bold text-slate-900">完成したアプリの画面</h2>
+  </div>
+
+  <p class="mb-6 leading-relaxed">
+    シンプルな1画面構成。保存先の指定、ドラッグ＆ドロップゾーン、Outlook から直接取り込むボタン、処理結果のログを表示する。
+  </p>
+
+  <!-- Windows アプリ風モックアップ -->
+  <div class="rounded-xl overflow-hidden border border-slate-300 shadow-lg mb-8">
+    <!-- タイトルバー -->
+    <div class="flex items-center bg-slate-100 border-b border-slate-200 px-3 py-2 gap-2">
+      <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600 flex-shrink-0"></i>
+      <span class="text-xs text-slate-700 font-medium flex-1">Email Manager</span>
+      <div class="flex gap-1.5">
+        <div class="w-4 h-4 rounded-sm border border-slate-300 bg-white flex items-center justify-center">
+          <div class="w-2 h-px bg-slate-500"></div>
+        </div>
+        <div class="w-4 h-4 rounded-sm border border-slate-300 bg-white flex items-center justify-center">
+          <div class="w-2.5 h-2.5 border border-slate-500 rounded-sm"></div>
+        </div>
+        <div class="w-4 h-4 rounded-sm bg-red-400 flex items-center justify-center">
+          <span class="text-white text-[9px] font-bold leading-none">✕</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- アプリ本体 -->
+    <div class="bg-white p-4">
+      <!-- 保存先フォルダ行 -->
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-xs text-slate-600 whitespace-nowrap">保存先フォルダ:</span>
+        <div class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs text-slate-500 bg-slate-50 truncate">
+          C:\Users\ketas\Desktop\ADS関連\卒業制作　サンプル
+        </div>
+        <button class="border border-slate-300 rounded px-2 py-1 text-xs text-slate-600 bg-slate-50 whitespace-nowrap">参照…</button>
+      </div>
+
+      <!-- D&D ゾーン -->
+      <div class="bg-blue-50 border border-slate-200 rounded p-10 mb-2 flex items-center justify-center">
+        <div class="text-center">
+          <p class="text-sm text-slate-600 mb-0.5">ここに Outlook のメールを</p>
+          <p class="text-sm text-slate-600">ドラッグ＆ドロップ</p>
+        </div>
+      </div>
+
+      <!-- 取り込みボタン行 -->
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[11px] text-slate-400">Outlook でメールを選択してから押してください</span>
+        <button class="border border-slate-300 rounded px-3 py-1 text-xs text-slate-700 bg-slate-50 whitespace-nowrap">Outlook から取り込む</button>
+      </div>
+
+      <!-- ログエリア -->
+      <div class="text-xs text-slate-600 mb-1">処理ログ:</div>
+      <div class="border border-slate-200 rounded h-12 bg-slate-50 px-2 py-1">
+        <div class="text-[11px] text-emerald-600">✅ 保存完了: C:\...\R8.8.29　件名</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保存先フォルダの構造 -->
+  <div class="bg-ads-surface border border-ads-border rounded-xl p-6">
+    <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+      <i data-lucide="folder-tree" class="w-4 h-4 text-ads-accent"></i>
+      保存後のフォルダ構成
+    </h3>
+    <div class="font-mono text-sm text-slate-700 space-y-1">
+      <div class="flex items-center gap-2">
+        <i data-lucide="folder" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+        <span>EmailArchive /</span>
+      </div>
+      <div class="flex items-center gap-2 ml-6">
+        <i data-lucide="folder" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+        <span class="text-ads-accent-light">R8.8.29　第7期実施計画について /</span>
+      </div>
+      <div class="flex items-center gap-2 ml-12">
+        <i data-lucide="file" class="w-4 h-4 text-blue-500 flex-shrink-0"></i>
+        <span class="text-sm">第7期実施計画について.msg</span>
+      </div>
+      <div class="flex items-center gap-2 ml-12">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i>
+        <span class="text-sm">実施計画書（案）.xlsx</span>
+      </div>
+      <div class="flex items-center gap-2 ml-12">
+        <i data-lucide="file-text" class="w-4 h-4 text-orange-500 flex-shrink-0"></i>
+        <span class="text-sm">要求書様式.docx</span>
+      </div>
+    </div>
+    <p class="text-xs text-ads-muted mt-4">
+      フォルダ1つ = メール1通。フォルダ名の <strong class="text-slate-700">R8.8.29</strong> は令和8年8月29日を意味する。
+    </p>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 4: アプリでできること                                -->
+<!-- ============================================================ -->
+<section class="mb-16 md:mb-20">
+  <div class="flex items-center gap-3 mb-8">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-500/10 flex-shrink-0">
+      <i data-lucide="list-checks" class="w-5 h-5 text-emerald-600"></i>
+    </div>
+    <h2 class="text-xl md:text-2xl font-bold text-slate-900">アプリでできること</h2>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="flex gap-4 bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="mouse-pointer-click" class="w-5 h-5 text-blue-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 mb-1.5">ボタン1つで取り込み</h3>
+        <p class="text-sm text-ads-muted leading-relaxed">Outlook でメールを選択した状態でボタンを押すと、指定した保存先にフォルダが作成されてメールが保存される。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-4 bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="layers" class="w-5 h-5 text-purple-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 mb-1.5">複数メールを一括処理</h3>
+        <p class="text-sm text-ads-muted leading-relaxed">Outlook で複数のメールを選択（Ctrl+クリック）してからボタンを押すと、選択した数だけのフォルダが自動で作られる。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-4 bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="folder-open" class="w-5 h-5 text-amber-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 mb-1.5">令和日付＋件名がフォルダ名に</h3>
+        <p class="text-sm text-ads-muted leading-relaxed">受信日（令和表記）と件名を組み合わせたフォルダ名を自動生成。フォルダ内には .msg ファイルと添付ファイルがまとめて保存される。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-4 bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="hard-drive" class="w-5 h-5 text-emerald-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 mb-1.5">保存先を自由に選択・記憶</h3>
+        <p class="text-sm text-ads-muted leading-relaxed">「参照…」ボタンで保存先フォルダを選択できる。一度設定した保存先はアプリを閉じても記憶されるので、次回起動時に再入力は不要。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 5: 使ったツール・ライブラリ                          -->
+<!-- ============================================================ -->
+<section class="mb-16 md:mb-20">
+  <div class="flex items-center gap-3 mb-8">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-cyan-500/10 flex-shrink-0">
+      <i data-lucide="package" class="w-5 h-5 text-cyan-600"></i>
+    </div>
+    <h2 class="text-xl md:text-2xl font-bold text-slate-900">使ったツール・ライブラリ</h2>
+  </div>
+
+  <p class="mb-8 leading-relaxed">
+    アプリを動かすために、3つのソフトウェアをインストールした。いずれも<strong class="text-slate-900">無料・安全</strong>で使える。
+  </p>
+
+  <div class="space-y-4">
+
+    <!-- Python -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-ads-border/50">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="code-2" class="w-5 h-5 text-blue-600"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900">Python（パイソン）</h3>
+          <div class="text-xs text-ads-muted">アプリ本体の開発言語</div>
+        </div>
+        <div class="ml-auto">
+          <span class="text-[11px] bg-blue-500/10 text-blue-600 px-2.5 py-1 rounded-full font-medium">python.org からインストール</span>
+        </div>
+      </div>
+      <div class="px-6 py-4">
+        <p class="text-sm text-ads-muted leading-relaxed">
+          このアプリ全体を書いているプログラミング言語。無料で使えて、Windows・Mac・Linux のどこでも動く。今回のようなデスクトップツールから、データ分析・AI まで幅広く使われている言語で、<strong class="text-slate-800">世界で最も人気のあるプログラミング言語の一つ</strong>。
+        </p>
+      </div>
+    </div>
+
+    <!-- tkinterdnd2 -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-ads-border/50">
+        <div class="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="move" class="w-5 h-5 text-purple-600"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900">tkinterdnd2（ティーケーインタードロップ）</h3>
+          <div class="text-xs text-ads-muted">ドラッグ＆ドロップ機能の追加</div>
+        </div>
+        <div class="ml-auto">
+          <span class="text-[11px] bg-purple-500/10 text-purple-600 px-2.5 py-1 rounded-full font-medium whitespace-nowrap">py -m pip install tkinterdnd2</span>
+        </div>
+      </div>
+      <div class="px-6 py-4">
+        <p class="text-sm text-ads-muted leading-relaxed">
+          Python 標準の画面ライブラリ（tkinter）には、ドラッグ＆ドロップを受け取る機能がない。このライブラリを追加することで、<strong class="text-slate-800">ファイルをアプリのウィンドウにドロップして処理できる</strong>ようになる。無料・オープンソース。
+        </p>
+      </div>
+    </div>
+
+    <!-- pywin32 -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-ads-border/50">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="plug" class="w-5 h-5 text-emerald-600"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900">pywin32 / win32com（パイウィン）</h3>
+          <div class="text-xs text-ads-muted">Outlook との連携</div>
+        </div>
+        <div class="ml-auto">
+          <span class="text-[11px] bg-emerald-500/10 text-emerald-600 px-2.5 py-1 rounded-full font-medium whitespace-nowrap">py -m pip install pywin32</span>
+        </div>
+      </div>
+      <div class="px-6 py-4">
+        <p class="text-sm text-ads-muted leading-relaxed mb-4">
+          Python から Windows の「<strong class="text-slate-800">COM（コム）</strong>」という仕組みを使うためのライブラリ。COM とは、<strong class="text-slate-800">Windows 上のアプリ同士が情報をやり取りするための Microsoft 公式の仕組み</strong>。Outlook もこれに対応しているので、このライブラリを使うと「現在選択中のメールの件名を教えて」「添付ファイルを保存して」という操作をプログラムから直接できる。
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="bg-white border border-emerald-200 rounded-lg p-3 text-center">
+            <i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-600 mx-auto mb-1"></i>
+            <div class="text-xs font-bold text-slate-700 mb-0.5">費用</div>
+            <div class="text-xs text-ads-muted">無料</div>
+          </div>
+          <div class="bg-white border border-emerald-200 rounded-lg p-3 text-center">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 mx-auto mb-1"></i>
+            <div class="text-xs font-bold text-slate-700 mb-0.5">安全性</div>
+            <div class="text-xs text-ads-muted">Microsoft 公式の仕組みを使用</div>
+          </div>
+          <div class="bg-white border border-emerald-200 rounded-lg p-3 text-center">
+            <i data-lucide="wifi-off" class="w-4 h-4 text-emerald-600 mx-auto mb-1"></i>
+            <div class="text-xs font-bold text-slate-700 mb-0.5">通信</div>
+            <div class="text-xs text-ads-muted">PC 内のみ・外部送信なし</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 6: 苦戦ポイントと工夫ポイント                        -->
+<!-- ============================================================ -->
+<section class="mb-16 md:mb-20">
+  <div class="flex items-center gap-3 mb-8">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-red-500/10 flex-shrink-0">
+      <i data-lucide="flame" class="w-5 h-5 text-red-600"></i>
+    </div>
+    <h2 class="text-xl md:text-2xl font-bold text-slate-900">苦戦ポイントと工夫ポイント</h2>
+  </div>
+
+  <div class="space-y-4 mb-8">
+
+    <!-- 苦戦1 -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-3 bg-red-500/5 border-b border-ads-border/50">
+        <div class="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="x" class="w-3.5 h-3.5 text-red-600"></i>
+        </div>
+        <h3 class="font-bold text-red-700 text-sm">苦戦：win32com（pywin32）の理解</h3>
+      </div>
+      <div class="px-6 py-4">
+        <p class="text-sm text-ads-muted leading-relaxed">
+          「Outlook と Python をつなぐ」という仕組みが最初はイメージしづらかった。どうやって Outlook の中を操作できるのか、職場のパソコンで本当に使えるのか、セキュリティ上の問題はないのかを一つひとつ確認する必要があった。
+        </p>
+      </div>
+    </div>
+
+    <!-- 工夫1 -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-3 bg-blue-500/5 border-b border-ads-border/50">
+        <div class="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="bot" class="w-3.5 h-3.5 text-blue-600"></i>
+        </div>
+        <h3 class="font-bold text-blue-700 text-sm">工夫：AI との壁打ちで理解を深めた</h3>
+      </div>
+      <div class="px-6 py-4">
+        <p class="text-sm text-ads-muted leading-relaxed">
+          わからないことは AI に質問しながら進めた。「中学生でもわかるように説明してほしい」と聞いたり、「費用は？」「安全性は？」と確認したりすることで、<strong class="text-slate-800">自分が納得できるまで理解してから実装を進める</strong>ことができた。
+        </p>
+      </div>
+    </div>
+
+    <!-- 苦戦2 -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-3 bg-red-500/5 border-b border-ads-border/50">
+        <div class="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="x" class="w-3.5 h-3.5 text-red-600"></i>
+        </div>
+        <h3 class="font-bold text-red-700 text-sm">苦戦：Outlook からの直接ドラッグ＆ドロップができない</h3>
+      </div>
+      <div class="px-6 py-4">
+        <p class="text-sm text-ads-muted leading-relaxed">
+          Outlook のメール一覧から直接アプリにドロップしようとしたが、うまく動かなかった。調べると Outlook が D&D 時に渡すデータが特殊な形式であることが原因だった。
+        </p>
+      </div>
+    </div>
+
+    <!-- 工夫2 -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-3 bg-blue-500/5 border-b border-ads-border/50">
+        <div class="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-blue-600"></i>
+        </div>
+        <h3 class="font-bold text-blue-700 text-sm">工夫：「Outlook から取り込む」ボタンで解決</h3>
+      </div>
+      <div class="px-6 py-4">
+        <p class="text-sm text-ads-muted leading-relaxed">
+          D&D の代替手段として、Outlook で選択中のメールを直接読み取る「Outlook から取り込む」ボタンを追加した。<strong class="text-slate-800">セキュリティ面でも安全な方法</strong>（Outlook で選択したメールだけにアクセスするため最小限の権限で動く）として採用した。
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 結果 -->
+  <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-6">
+    <div class="flex items-start gap-4">
+      <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="trophy" class="w-5 h-5 text-emerald-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-emerald-700 mb-2">得られたもの</h3>
+        <div class="space-y-2">
+          <div class="flex items-start gap-2 text-sm text-ads-muted">
+            <i data-lucide="check" class="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0"></i>
+            <span>「自分の武器を自分で作る」という目標を達成できた</span>
+          </div>
+          <div class="flex items-start gap-2 text-sm text-ads-muted">
+            <i data-lucide="check" class="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0"></i>
+            <span>小さな面倒を解決するためのツールは自分で作れるという自信につながった</span>
+          </div>
+          <div class="flex items-start gap-2 text-sm text-ads-muted">
+            <i data-lucide="check" class="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0"></i>
+            <span>わからないことを AI と壁打ちしながら進めると、理解が深まる実感を得た</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  CLOSING                                                     -->
+<!-- ============================================================ -->
+<section>
+  <div class="text-center bg-gradient-to-b from-ads-accent/5 to-transparent border border-ads-accent/10 rounded-xl p-8 md:p-10">
+    <i data-lucide="tool" class="w-8 h-8 text-ads-accent mx-auto mb-4"></i>
+    <p class="text-lg font-bold text-slate-900 mb-3">「小さな面倒」は自分で解決できる</p>
+    <p class="text-ads-muted max-w-lg mx-auto leading-relaxed">
+      大げさなシステムでなくていい。毎日の小さなストレスに気づき、それを解消するツールを自分で作れる。そのことを証明したのが、この Email Manager というアプリ。
+    </p>
+  </div>
+</section>
+
+  </main>
+  <footer class="max-w-3xl mx-auto px-5 pb-10 pt-6 border-t border-ads-border/30">
+    <p class="text-xs text-ads-dim text-center">AI-Driven School の図解ツールで作成</p>
+  </footer>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
